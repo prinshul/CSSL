@@ -1,0 +1,95 @@
+dataset: monuseg
+data_root: /scratch/dbst/phd/bsz178495/med_CL/monuseg
+split_dir: splits
+nclass: 2
+in_chns: 3
+widths:
+- 32
+- 64
+- 128
+- 256
+- 512
+backbone: resunet18
+pretrained: false
+input_norm: imagenet
+encoder_lr_mult: 1.0
+crop_size: 256
+scale_aug:
+- 0.8
+- 1.25
+labeled_color: hed
+strong_aug: hed
+batch_size: 8
+total_iters: 30000
+crops_per_image: 64
+warmup_iters: 2000
+optimizer: sgd
+lr: 0.01
+lr_warmup_iters: 0
+weight_decay: 0.0001
+conf_thresh: 0.95
+ema:
+  enable: true
+  decay: 0.999
+select_best: false
+method: cssl
+selfloop:
+  K: 100
+  Q: 10
+  th: 0.95
+  head_hidden: 512
+  aux_bn: frozen
+amp: bf16
+num_workers: 2
+eval_every: 2000
+log_every: 100
+cssl:
+  cl:
+    enable: true
+    weight: 0.1
+    rampup_iters: 1000
+    tau: 0.1
+    embed_dim: 256
+    patch_size: 64
+    stride: 32
+    min_pixels: 25
+    max_patches: 816
+    patch_quantum: 32
+    patch_mode: each
+    include_background: true
+    embed_from: patch
+    embed_level: -1
+    hard_ratio: 1.0
+    alpha_max: 0.4
+    max_hard: 256
+    aux_negatives: 256
+    queue: 4096
+    boundary: 2
+  cr:
+    enable: true
+    fallback: dropout
+    epsilon: 0.05
+    omega_momentum: 0.99
+    relative: true
+    fixed_lambda: null
+    mode: add
+    add_weight: 0.5
+_args:
+  config: configs/monuseg_selfloop.yaml
+  split_seed: 0
+  label_frac: '50'
+  save_path: /scratch/dbst/phd/bsz178495/med_CL/cssl-repro/exp/sabl_no_v2/monuseg_50_s0
+  device: cuda
+  seed: 0
+  eval_only: null
+  opts:
+  - data_root=/scratch/dbst/phd/bsz178495/med_CL/monuseg
+  - cssl.cr.mode=add
+  - cssl.cr.add_weight=0.5
+  - cssl.cl.embed_from=image
+  - cssl.cl.embed_level=-3
+  - cssl.cl.queue=4096
+  - cssl.cl.boundary=2
+  - cssl.cl.embed_from=patch
+  - cssl.cl.embed_level=-1
+  bn_recalib: 0

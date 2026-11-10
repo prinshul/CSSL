@@ -1,0 +1,87 @@
+dataset: chaos
+data_root: /scratch/dbst/phd/bsz178495/med_CL/chaos_dafnet
+split_dir: splits
+split_prefix: dafnet
+chaos_protocol: dafnet
+use_t1_labels: true
+t2_share: 0.5
+chaos_metric: dafnet
+nclass: 5
+in_chns: 1
+chaos_context: 0
+chaos_aug: strong
+affine:
+  rot: 20.0
+  scale:
+  - 0.85
+  - 1.2
+  shift: 0.08
+  p: 0.8
+geom_aug: side_preserving
+backbone: unet
+widths:
+- 64
+- 128
+- 256
+- 512
+- 1024
+pretrained: false
+input_norm: pm1
+encoder_lr_mult: 1.0
+crop_size: 192
+batch_size: 12
+total_iters: 16000
+warmup_iters: 2000
+optimizer: sgd
+lr: 0.01
+lr_warmup_iters: 0
+weight_decay: 0.0001
+conf_thresh: 0.95
+ema:
+  enable: true
+  decay: 0.999
+select_best: true
+amp: bf16
+num_workers: 2
+eval_every: 1000
+log_every: 100
+cssl:
+  cl:
+    enable: true
+    weight: 0.1
+    rampup_iters: 1000
+    tau: 0.1
+    embed_dim: 256
+    patch_size: 64
+    stride: 32
+    min_pixels: 25
+    max_patches: 816
+    patch_quantum: 32
+    patch_mode: prominent
+    include_background: false
+    hard_ratio: 1.0
+    alpha_max: 0.4
+    max_hard: 256
+    aux_negatives: 256
+  cr:
+    enable: true
+    fallback: dropout
+    epsilon: 0.05
+    omega_momentum: 0.99
+    relative: true
+    fixed_lambda: null
+    mode: add
+    add_weight: 0.5
+_args:
+  config: configs/chaos_dafnet.yaml
+  split_seed: 0
+  label_frac: '25'
+  save_path: /scratch/dbst/phd/bsz178495/med_CL/cssl-repro/exp/cssl_strongest/chaos_25_s0
+  device: cuda
+  seed: 0
+  eval_only: null
+  opts:
+  - data_root=/scratch/dbst/phd/bsz178495/med_CL/chaos_dafnet
+  - cssl.cr.mode=add
+  - cssl.cr.add_weight=0.5
+  bn_recalib: 0
