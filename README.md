@@ -103,7 +103,7 @@ CSSL settings (added to `configs/monuseg_selfloop.yaml` and `configs/chaos_dafne
      contrastive loss, consistency loss, hard negatives).
 2. Stage 2, 2 runs: CSSL with a fixed lambda (MoNuSeg seed 0, CHAOS split 1), set to the average lambda of the
    corresponding CSSL run.
-3. After each run it prints the run name, its test score and the wave progress, e.g. `[Stage 1/2: 12/26 runs done]`.
+3. After each run it prints the run name, its test score and the progress, e.g. `[Stage 1/2: 12/26 runs done]`.
 
 **Inside one run** (`train.py`)
 1. Loads the configuration and the split, builds the network (ResUNet-18 for MoNuSeg, U-Net 64-1024 for CHAOS) and
