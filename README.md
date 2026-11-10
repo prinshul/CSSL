@@ -3,6 +3,8 @@
 Training and evaluation code for CSSL on MoNuSeg (50% labels, Self-Loop's protocol) and CHAOS T2 (25% labels,
 DAFNet's protocol), with the recipe-only and supervised baselines and all ablations of the paper.
 
+**Demo:** https://prinshul.github.io/CSSL_demo/
+
 | | MoNuSeg 50% (nuclei F1) | CHAOS T2 25% (Dice) |
 |---|---|---|
 | CSSL | 80.87 ± 0.17 (seeds 0, 1, 2: 80.66, 81.07, 80.88) | 89.01 ± 2.37 (splits 0, 1, 2: 90.47, 85.67, 90.90) |
