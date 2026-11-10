@@ -6,11 +6,12 @@ DATA=${DATA:?set DATA=<data root, e.g. /data/med>}
 STAGES=${STAGES:-"runs"}
 DATASETS=${DATASETS:-"monuseg chaos"}
 PAR=${PAR:-4}
-E=$REPO/exp
+E=${EXP:-$REPO/exp}
+SPLITS=${SPLITS:-$REPO/splits}
 LOGS=$E/paper_logs
 WLIST=$LOGS/wave_$(echo "${DATASETS:-monuseg chaos}" | tr ' ' '_').list
 mkdir -p "$LOGS"
-export DATA E LOGS WLIST OMP_NUM_THREADS=1 DEVICE=${DEVICE:-cuda} EXTRA_OPTS=${EXTRA_OPTS:-}
+export DATA E LOGS WLIST SPLITS OMP_NUM_THREADS=1 DEVICE=${DEVICE:-cuda} EXTRA_OPTS=${EXTRA_OPTS:-}
 has() { [[ " $DATASETS " == *" $1 "* ]]; }
 
 if [[ " $STAGES " == *" setup "* ]]; then
@@ -18,10 +19,11 @@ if [[ " $STAGES " == *" setup "* ]]; then
   if [ ! -f "$DATA/chaos_dafnet/meta.json" ]; then
     python tools/prep_chaos_dafnet.py --src "$DATA/downloads/chaos_raw" --out "$DATA/chaos_dafnet" || exit 1
   fi
-  [ -f splits/chaos/dafnet2.json ] || python tools/make_splits.py --dataset chaos --protocol dafnet \
-    --root "$DATA/chaos_dafnet" || exit 1
-  [ -f splits/monuseg/seed2.json ] || python tools/make_splits.py --dataset monuseg --root "$DATA/monuseg" || exit 1
-  echo "setup done: $DATA/monuseg, $DATA/chaos_dafnet, splits/"
+  [ -f "$SPLITS/chaos/dafnet2.json" ] || python tools/make_splits.py --dataset chaos --protocol dafnet \
+    --root "$DATA/chaos_dafnet" --out "$SPLITS" || exit 1
+  [ -f "$SPLITS/monuseg/seed2.json" ] || python tools/make_splits.py --dataset monuseg --root "$DATA/monuseg" \
+    --out "$SPLITS" || exit 1
+  echo "setup done: $DATA/monuseg, $DATA/chaos_dafnet, $SPLITS"
 fi
 
 one() {
@@ -32,7 +34,7 @@ one() {
   if [ -f "$out/results.json" ]; then echo "$(date +%H:%M) done     ${out#$REPO/}  [$(progress)]"; return; fi
   echo "$(date +%H:%M) start    ${out#$REPO/}"
   python train.py --device "${DEVICE:-cuda}" --config "configs/$cfg.yaml" --split-seed "$k" --label-frac "$frac" \
-    --save-path "$out" --opts data_root="$droot" ${EXTRA_OPTS:-} "$@" > "$LOGS/$name.log" 2>&1
+    --save-path "$out" --opts data_root="$droot" split_dir="$SPLITS" ${EXTRA_OPTS:-} "$@" > "$LOGS/$name.log" 2>&1
   if [ -f "$out/results.json" ]; then
     rm -f "$out/latest.pth"
     echo "$(date +%H:%M) finished ${out#$REPO/}  $(python tools/print_results.py --one "$out")  [$(progress)]"
@@ -114,6 +116,6 @@ if [[ " $STAGES " == *" runs "* ]]; then
 fi
 
 if [[ " $STAGES " == *" runs "* ]]; then
-  python tools/audit.py --data "$DATA" --exp "$E" > "$E/audit.txt" 2>&1; tail -2 "$E/audit.txt"
+  python tools/audit.py --data "$DATA" --exp "$E" --splits "$SPLITS" > "$E/audit.txt" 2>&1; tail -2 "$E/audit.txt"
 fi
 python tools/print_results.py --exp "$E"

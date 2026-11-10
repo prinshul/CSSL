@@ -37,7 +37,7 @@ gdown 1ZgqFJomqQGNnsx7w7QBzQQMVA16lbVCA -O monuseg_train.zip
 gdown 1NKkSQ5T0ZNQ8aUhh0a8Dt2YKYCQXIViw -O monuseg_test.zip
 mkdir -p monuseg_raw && unzip -q monuseg_train.zip -d monuseg_raw && unzip -q monuseg_test.zip -d monuseg_raw
 
-cd /path/to/cssl-repro
+cd /path/to/CSSL
 python tools/prep_monuseg.py --src $DATA/downloads/monuseg_raw --out $DATA/monuseg
 python tools/prep_chaos_dafnet.py --src $DATA/downloads/chaos_raw --out $DATA/chaos_dafnet
 python tools/make_splits.py --dataset monuseg --root $DATA/monuseg
@@ -69,6 +69,9 @@ tail -f run_paper.log
 
 `DATA` is any folder for the datasets. The command downloads and prepares the data, trains all 28 runs (about
 45 GPU-hours on one A100-80GB, 4 runs at a time), checks the runs (`exp/audit.txt`) and prints the result tables.
+`PAR` sets how many runs share the GPU (default 4 on an 80 GB GPU); use `PAR=2` or `PAR=1` on smaller GPUs.
+`exp/` needs about 13 GB. GPU training is not bit-exact, so a rerun lands within run-to-run noise of the reported
+numbers rather than on the same decimals; the per-split scores of the reported runs are in the table above.
 
 If a walltime limit stops it, run the same command again: finished runs are skipped and interrupted runs continue
 from their last checkpoint. The two stages can also be run separately (`STAGES=setup`, `STAGES=runs`), and the
@@ -108,8 +111,9 @@ CSSL settings (added to `configs/monuseg_selfloop.yaml` and `configs/chaos_dafne
 3. After each run it prints the run name, its test score and the wave progress, e.g. `[wave 1/2: 12/26 runs done]`.
 4. After the last run, `tools/audit.py` checks that no image or subject is in both training and test (file names and
    pixel hashes), that the labelled sets match the splits, that all runs of a dataset use the same network and
-   whether any run was resumed (`exp/audit.txt`), and `tools/print_results.py` prints the result tables (also
-   available at any time with `python tools/print_results.py --exp exp`).
+   whether any run was resumed (`exp/audit.txt`), and `tools/print_results.py` prints every number of the paper's
+   tables: the main results, the supervised references, the secondary MoNuSeg metrics, the ablations and the
+   CHAOS scores with DAFNet's rounding (also available at any time with `python tools/print_results.py --exp exp`).
 
 **Inside one run** (`train.py`)
 1. Loads the configuration and the split, builds the network (ResUNet-18 for MoNuSeg, U-Net 64-1024 for CHAOS) and
@@ -155,7 +159,18 @@ and draws test images with their predictions.
 | Logs of all runs | `exp/paper_logs/` |
 | Integrity checks | `exp/audit.txt` |
 
-## 5. Protocols
+## 5. Logs of the reported runs
+
+`logs/INDEX.md` lists every number of the paper's tables with the run it comes from and the value in that run's
+`results.json`; `logs/runs/` holds each run's `config.yaml`, `train.log`, `metrics.jsonl` and `results.json`, and
+`logs/print_results.txt` the printed tables. They were collected from the original runs with
+
+```bash
+python tools/collect_logs.py --exp exp --out logs --hash-weights
+python tools/print_results.py --exp exp > logs/print_results.txt
+```
+
+## 6. Protocols
 
 | | MoNuSeg (Self-Loop) | CHAOS T2 (DAFNet) |
 |---|---|---|
@@ -165,19 +180,21 @@ and draws test images with their predictions.
 | Metric | nuclei F1 (per-image nucleus Dice) | DAFNet's per-slice pooled Dice (argmax masks; rounded version also printed) |
 | Tested weights | final | best validation Dice |
 
-## 6. Pipeline test on synthetic data (CPU, about 30 minutes)
+## 7. Pipeline test on synthetic data (CPU, about 30 minutes)
 
 ```bash
 python tests/make_synthetic.py --out /tmp/syn --chaos-size 64 --chaos-slices 50 --chaos-t1-slices 50
 python tools/prep_monuseg.py --src /tmp/syn/monuseg_raw --out /tmp/syn/data/monuseg
 python tools/prep_chaos_dafnet.py --src /tmp/syn/chaos_raw --out /tmp/syn/data/chaos_dafnet --size 64 --allow-mismatch
-python tools/make_splits.py --dataset monuseg --root /tmp/syn/data/monuseg
-python tools/make_splits.py --dataset chaos --protocol dafnet --root /tmp/syn/data/chaos_dafnet
-DATA=/tmp/syn/data DEVICE=cpu PAR=2 EXTRA_OPTS="total_iters=6 warmup_iters=2 eval_every=3 batch_size=2 \
-  crop_size=64 num_workers=0 log_every=1 cssl.cl.rampup_iters=2 crops_per_image=2" bash run_paper.sh
+python tools/make_splits.py --dataset monuseg --root /tmp/syn/data/monuseg --out /tmp/syn/splits
+python tools/make_splits.py --dataset chaos --protocol dafnet --root /tmp/syn/data/chaos_dafnet --out /tmp/syn/splits
+DATA=/tmp/syn/data SPLITS=/tmp/syn/splits EXP=/tmp/syn/exp DEVICE=cpu PAR=2 EXTRA_OPTS="total_iters=6 \
+  warmup_iters=2 eval_every=3 batch_size=2 crop_size=64 num_workers=0 log_every=1 cssl.cl.rampup_iters=2 \
+  crops_per_image=2" bash run_paper.sh
 ```
 
-Use a copy of the repository for this test, since it writes `splits/` and `exp/`.
+The test writes only to `/tmp/syn` (about 13 GB, mostly checkpoints), so `splits/` and `exp/` in the repository are
+not touched.
 
 ## Layout
 
@@ -187,10 +204,11 @@ cssl/          class-wise patches, contrastive loss, Silhouette, feature perturb
 model/         U-Net, ResUNet-18, CSSL network (projection head, feature-level masked pooling)
 data/          datasets and augmentations
 configs/       monuseg_selfloop.yaml, chaos_dafnet.yaml
-tools/         data preparation, splits, audit, print_results, qualitative
+tools/         data preparation, splits, audit, print_results, qualitative, collect_logs
 setup/         install_env.sh, prepare_data.sh
 tests/         unit tests, synthetic data
 splits/        label splits of the reported runs
+logs/          logs and test scores of the reported runs
 run_paper.sh   setup and runs
 ```
 

@@ -56,6 +56,36 @@ def table(E, title, key, rows, ref_tag, published, final=False, metric="test_mea
     print("  %-30s %31.2f" % published)
 
 
+def sup100(E):
+    for d in sorted(glob.glob(os.path.join(E, "*", "monuseg_100_s0"))):
+        c = os.path.join(d, "config.yaml")
+        if os.path.exists(c):
+            cfg = {}
+            for line in open(c):
+                if ":" in line and not line.startswith(" "):
+                    k, v = line.split(":", 1)
+                    cfg[k.strip()] = v.strip()
+            try:
+                if int(cfg.get("warmup_iters", 0)) >= int(cfg.get("total_iters", 1)):
+                    return d
+            except ValueError:
+                pass
+    return os.path.join(E, "sup100", "monuseg_100_s0")
+
+
+def secondary(E):
+    print("\nMoNuSeg secondary metrics, seed 0 (Self-Loop F1 calibration and appendix)")
+    print("  %-30s %9s %9s %9s %9s" % ("", "nuclei F1", "fg/bg F1", "bal. acc", "pooled"))
+    for name, d in (("Supervised, 50% labels", os.path.join(E, "main_sup", "monuseg_50_s0")),
+                    ("Supervised, 100% labels", sup100(E)),
+                    ("CSSL", os.path.join(E, "cssl_strongest", "monuseg_50_s0"))):
+        r = load(d)
+        if r is None:
+            continue
+        vals = [r.get(k) for k in ("test_mean_dice", "selfloop_f1_fg_bg_mean", "balanced_accuracy", "pooled_dice_nucleus")]
+        print("  %-30s %s" % (name, " ".join("%9.2f" % v if v is not None else "%9s" % "-" for v in vals)))
+
+
 def ablation(E, title, key, k, rows):
     print("\n%s" % title)
     full = score(E, "cssl_strongest", key, k)
@@ -89,6 +119,7 @@ def main():
     table(E, "CHAOS T2 25% labels, same checkpoints, DAFNet's rounding (each organ probability > 0.5)", "chaos_25",
           [("Supervised", "main_sup"), ("Recipe only", "cabl_none"), ("CSSL", "cssl_strongest")], "cabl_none",
           ("DAFNet (published)", DAFNET), metric="dafnet_dice_round")
+    secondary(E)
     abl = [("Full CSSL", "cssl_strongest"), ("w/o contrastive loss", "sabl_no_cl"), ("w/o consistency loss", "sabl_no_cr"),
            ("w/o hard negatives", "sabl_no_hnm"), ("w/o Silhouette (fixed lambda)", "sabl_fixlam"),
            ("w/o boundary class", "sabl_no_bnd"), ("w/o feature-level masking", "sabl_no_v2"),
