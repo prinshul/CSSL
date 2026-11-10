@@ -57,22 +57,21 @@ browser from `https://drive.google.com/file/d/1ZgqFJomqQGNnsx7w7QBzQQMVA16lbVCA`
 | `ls splits/monuseg splits/chaos` | `seed0.json seed1.json seed2.json`, `dafnet0.json dafnet1.json dafnet2.json` |
 
 Overlays of images and labels for a visual check are written to `$DATA/monuseg/overlays` and
-`$DATA/chaos_dafnet/overlays`. Then run the experiments without the setup stage: `STAGES="runs paper"`.
+`$DATA/chaos_dafnet/overlays`. Then run the experiments without the setup stage: `STAGES="runs"`.
 
 ## 2. Run everything end to end
 
 ```bash
 conda activate cssl
-DATA=/data/med STAGES="setup runs paper" nohup bash run_paper.sh > run_paper.log 2>&1 &
+DATA=/data/med STAGES="setup runs" nohup bash run_paper.sh > run_paper.log 2>&1 &
 tail -f run_paper.log
 ```
 
 `DATA` is any folder for the datasets. The command downloads and prepares the data, trains all 28 runs (about
-45 GPU-hours on one A100-80GB, 4 runs at a time), prints the result tables and builds `paper/main.pdf`.
+45 GPU-hours on one A100-80GB, 4 runs at a time), prints the result tables.
 
 If a walltime limit stops it, run the same command again: finished runs are skipped and interrupted runs continue
-from their last checkpoint. The three stages can also be run separately (`STAGES=setup`, `STAGES=runs`,
-`STAGES=paper`), and the datasets can be split over two GPUs:
+from their last checkpoint. The three stages can also be run separately (`STAGES=setup`, `STAGES=runs`), and the datasets can be split over two GPUs:
 
 ```bash
 DATA=/data/med DATASETS=monuseg STAGES=runs nohup bash run_paper.sh > mon.log 2>&1 &
@@ -142,7 +141,7 @@ CSSL settings (added to `configs/monuseg_selfloop.yaml` and `configs/chaos_dafne
 | CHAOS table | `exp/main_sup`, `exp/cabl_none`, `exp/cssl_strongest` |
 | Ablations | `exp/sabl_*` |
 | Logs of all runs | `exp/paper_logs/` |
-| Paper | `paper/main.pdf` |
+
 
 ## 5. Protocols
 
