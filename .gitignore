@@ -1,0 +1,6 @@
+exp/
+figures/
+__pycache__/
+.pytest_cache/
+*.pth
+*.log

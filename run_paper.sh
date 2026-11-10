@@ -3,13 +3,14 @@ set -uo pipefail
 REPO=$(cd "$(dirname "$0")" && pwd)
 cd "$REPO" || exit 1
 DATA=${DATA:?set DATA=<data root, e.g. /data/med>}
-STAGES=${STAGES:-"runs paper"}
+STAGES=${STAGES:-"runs"}
 DATASETS=${DATASETS:-"monuseg chaos"}
 PAR=${PAR:-4}
 E=$REPO/exp
 LOGS=$E/paper_logs
+WLIST=$LOGS/wave_$(echo "${DATASETS:-monuseg chaos}" | tr ' ' '_').list
 mkdir -p "$LOGS"
-export DATA E LOGS OMP_NUM_THREADS=1 DEVICE=${DEVICE:-cuda} EXTRA_OPTS=${EXTRA_OPTS:-}
+export DATA E LOGS WLIST OMP_NUM_THREADS=1 DEVICE=${DEVICE:-cuda} EXTRA_OPTS=${EXTRA_OPTS:-}
 has() { [[ " $DATASETS " == *" $1 "* ]]; }
 
 if [[ " $STAGES " == *" setup "* ]]; then
@@ -41,14 +42,14 @@ export -f one
 export REPO
 progress() {
   local n=0 d
-  while read -r d; do [ -f "$d/results.json" ] && n=$((n + 1)); done < "$LOGS/wave.list"
-  echo "$WNAME: $n/$(wc -l < "$LOGS/wave.list") runs done"
+  while read -r d; do [ -f "$d/results.json" ] && n=$((n + 1)); done < "$WLIST"
+  echo "$WNAME: $n/$(wc -l < "$WLIST") runs done"
 }
 export -f progress
 wave() {
   export WNAME=$1; shift
-  printf '%s\n' "$@" | grep -v '^$' | awk '{print $2}' > "$LOGS/wave.list"
-  echo "== $(date +%H:%M)  $WNAME: $(wc -l < "$LOGS/wave.list") runs, $PAR at a time"
+  printf '%s\n' "$@" | grep -v '^$' | awk '{print $2}' > "$WLIST"
+  echo "== $(date +%H:%M)  $WNAME: $(wc -l < "$WLIST") runs, $PAR at a time"
   printf '%s\n' "$@" | grep -v '^$' | xargs -P "$PAR" -I{} bash -c '{}'
 }
 avg_lam() {
@@ -112,16 +113,7 @@ if [[ " $STAGES " == *" runs "* ]]; then
   wave "wave 2/2" "${W2[@]}"
 fi
 
-if [[ " $STAGES " == *" paper "* ]]; then
-  echo "== $(date)  integrity audit (leakage, labelled subsets, networks, every component active): exp/audit.txt"
+if [[ " $STAGES " == *" runs "* ]]; then
   python tools/audit.py --data "$DATA" --exp "$E" > "$E/audit.txt" 2>&1; tail -2 "$E/audit.txt"
-  echo "== $(date)  numbers.json from the runs (differences are listed before anything is written)"
-  python tools/export_paper_numbers.py --exp "$E" --numbers paper/numbers.json || \
-    echo "NOTE: some values differ from the shipped numbers.json (listed above); writing the new ones"
-  python tools/export_paper_numbers.py --exp "$E" --numbers paper/numbers.json --write > /dev/null
-  python paper/gen_numbers.py && python paper/make_figures.py
-  python tools/qualitative.py --exp "$E" --out paper/figures || echo "qualitative figures skipped (see above)"
-  (cd paper && latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex > build.log 2>&1) \
-    && echo "paper: $REPO/paper/main.pdf" || echo "LaTeX failed: see paper/build.log"
 fi
 python tools/print_results.py --exp "$E"

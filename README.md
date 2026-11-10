@@ -57,7 +57,7 @@ browser from `https://drive.google.com/file/d/1ZgqFJomqQGNnsx7w7QBzQQMVA16lbVCA`
 | `ls splits/monuseg splits/chaos` | `seed0.json seed1.json seed2.json`, `dafnet0.json dafnet1.json dafnet2.json` |
 
 Overlays of images and labels for a visual check are written to `$DATA/monuseg/overlays` and
-`$DATA/chaos_dafnet/overlays`. Then run the experiments without the setup stage: `STAGES="runs"`.
+`$DATA/chaos_dafnet/overlays`. Then run the experiments without the setup stage: `STAGES=runs`.
 
 ## 2. Run everything end to end
 
@@ -68,10 +68,11 @@ tail -f run_paper.log
 ```
 
 `DATA` is any folder for the datasets. The command downloads and prepares the data, trains all 28 runs (about
-45 GPU-hours on one A100-80GB, 4 runs at a time), prints the result tables.
+45 GPU-hours on one A100-80GB, 4 runs at a time), checks the runs (`exp/audit.txt`) and prints the result tables.
 
 If a walltime limit stops it, run the same command again: finished runs are skipped and interrupted runs continue
-from their last checkpoint. The three stages can also be run separately (`STAGES=setup`, `STAGES=runs`), and the datasets can be split over two GPUs:
+from their last checkpoint. The two stages can also be run separately (`STAGES=setup`, `STAGES=runs`), and the
+datasets can be split over two GPUs:
 
 ```bash
 DATA=/data/med DATASETS=monuseg STAGES=runs nohup bash run_paper.sh > mon.log 2>&1 &
@@ -92,18 +93,23 @@ CSSL settings (added to `configs/monuseg_selfloop.yaml` and `configs/chaos_dafne
 2. Converts MoNuSeg to image and mask files: 30 training and 14 test images.
 3. Converts CHAOS as DAFNet's code does: T2-SPIR and T1-DUAL out-phase, DAFNet's slice ranges, 192 x 192.
 4. Writes the splits: DAFNet's three CHAOS splits (14 / 3 / 3 subjects, 4 labelled T2 subjects) and three random
-   MoNuSeg label subsets of 15 images (seeds 0, 1, 2).
+   MoNuSeg label subsets of 15 images (seeds 0, 1, 2). The splits used for the reported results are in `splits/`;
+   they are only written if missing, and the fixed seeds give the same files.
 
 **Stage `runs`** (`run_paper.sh` calls `train.py` once per run)
-1. Stage 1, 26 runs:
+1. Wave 1, 26 runs:
    - MoNuSeg: CSSL and recipe only on seeds 0, 1, 2; supervised with 50% and 100% labels; 6 ablations of CSSL
      on seed 0 (without contrastive loss, consistency loss, hard negatives, boundary class, feature-level masking,
      memory bank).
    - CHAOS: CSSL, recipe only and supervised on splits 0, 1, 2; 3 ablations of CSSL on split 1 (without
      contrastive loss, consistency loss, hard negatives).
-2. Stage 2, 2 runs: CSSL with a fixed lambda (MoNuSeg seed 0, CHAOS split 1), set to the average lambda of the
+2. Wave 2, 2 runs: CSSL with a fixed lambda (MoNuSeg seed 0, CHAOS split 1), set to the average lambda of the
    corresponding CSSL run.
-3. After each run it prints the run name, its test score and the progress, e.g. `[Stage 1/2: 12/26 runs done]`.
+3. After each run it prints the run name, its test score and the wave progress, e.g. `[wave 1/2: 12/26 runs done]`.
+4. After the last run, `tools/audit.py` checks that no image or subject is in both training and test (file names and
+   pixel hashes), that the labelled sets match the splits, that all runs of a dataset use the same network and
+   whether any run was resumed (`exp/audit.txt`), and `tools/print_results.py` prints the result tables (also
+   available at any time with `python tools/print_results.py --exp exp`).
 
 **Inside one run** (`train.py`)
 1. Loads the configuration and the split, builds the network (ResUNet-18 for MoNuSeg, U-Net 64-1024 for CHAOS) and
@@ -131,6 +137,12 @@ CSSL settings (added to `configs/monuseg_selfloop.yaml` and `configs/chaos_dafne
    score with DAFNet's per-organ rounding is stored as `dafnet_dice_round`). Writes `results.json` with the score of
    every test image or subject, and `final.pth`.
 
+**Segmentation figures** (optional)
+```bash
+python tools/qualitative.py --exp exp --out figures
+```
+Reloads the supervised, recipe and CSSL networks, re-scores them on the test sets (OK if equal to `results.json`)
+and draws test images with their predictions.
 
 ## 4. Outputs
 
@@ -141,7 +153,7 @@ CSSL settings (added to `configs/monuseg_selfloop.yaml` and `configs/chaos_dafne
 | CHAOS table | `exp/main_sup`, `exp/cabl_none`, `exp/cssl_strongest` |
 | Ablations | `exp/sabl_*` |
 | Logs of all runs | `exp/paper_logs/` |
-
+| Integrity checks | `exp/audit.txt` |
 
 ## 5. Protocols
 
@@ -175,11 +187,11 @@ cssl/          class-wise patches, contrastive loss, Silhouette, feature perturb
 model/         U-Net, ResUNet-18, CSSL network (projection head, feature-level masked pooling)
 data/          datasets and augmentations
 configs/       monuseg_selfloop.yaml, chaos_dafnet.yaml
-tools/         data preparation, splits, audit, print_results, export_paper_numbers, qualitative, video_assets
+tools/         data preparation, splits, audit, print_results, qualitative
 setup/         install_env.sh, prepare_data.sh
 tests/         unit tests, synthetic data
-run_paper.sh   all stages
-paper/         main.tex, references.bib, numbers.json, gen_numbers.py, make_figures.py, figures/, video/
+splits/        label splits of the reported runs
+run_paper.sh   setup and runs
 ```
 
 Licenses: the U-Net, augmentations and Dice loss come from UniMatch (MIT, `LICENSE.UniMatch`). CHAOS and MoNuSeg are

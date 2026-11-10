@@ -276,7 +276,7 @@ def save(fig, out, name):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--exp", default=os.path.join(REPO, "exp"), help="experiment root (exp/)")
-    ap.add_argument("--out", default=os.path.join(REPO, "paper", "figures"))
+    ap.add_argument("--out", default=os.path.join(REPO, "figures"))
     ap.add_argument("--sup-tag", default="main_sup", help="tag of the supervised runs (column skipped if absent)")
     ap.add_argument("--split-dir", default=None, help="default: the run's split_dir")
     ap.add_argument("--only", choices=["monuseg", "chaos"], default=None)
