@@ -1,0 +1,10 @@
+numpy==1.26.4
+scipy==1.13.1
+opencv-python-headless==4.10.0.84
+pillow==10.4.0
+pyyaml==6.0.2
+pydicom==3.0.1
+tifffile==2024.8.30
+scikit-learn==1.5.2
+gdown==5.2.0
+pytest==8.3.3

@@ -1,0 +1,114 @@
+{
+  "_note": "Results used in the paper, figures and video. MoNuSeg: nuclei F1 (nucleus Dice per image), final weights. CHAOS: DAFNet's Dice, best-validation checkpoint (best_val). sd = population SD over the 3 splits / seeds.",
+  "monuseg": {
+    "selfloop_published": 79.1,
+    "selfloop_published_sup50": 75.87,
+    "selfloop_published_sup100": 79.3,
+    "selfloop_published_sup20": 71.51,
+    "selfloop_published_sl20": 77.11,
+    "selfloop_table2_50": {
+      "Softmax": 76.18,
+      "Ensemble": 76.87,
+      "MC Dropout": 77.98,
+      "Self-Loop w/o L_SS": 77.78,
+      "Self-Loop": 79.1
+    },
+    "supervised_50_s0": {
+      "nuclei_f1": 76.01,
+      "fgbg_f1": 84.41,
+      "bal_acc": 85.23
+    },
+    "supervised_100_s0": {
+      "nuclei_f1": 77.64,
+      "fgbg_f1": 84.62,
+      "bal_acc": 87.49
+    },
+    "recipe": [
+      77.69,
+      78.5,
+      79.99
+    ],
+    "cssl_full": [
+      80.66,
+      81.07,
+      80.88
+    ],
+    "cssl_full_secondary": {
+      "pooled_nuclei_f1": 81.0,
+      "fgbg_f1": 87.73,
+      "bal_acc": 87.27
+    },
+    "ablation_s0": {
+      "Recipe only": 77.69,
+      "w/o CL": 78.51,
+      "w/o CR": 80.42,
+      "w/o HNM": 80.07,
+      "w/o Silhouette": 80.54,
+      "w/o memory bank": 81.14,
+      "w/o boundary class": 77.99,
+      "w/o feature-level embedding": 79.11,
+      "Full": 80.66
+    }
+  },
+  "chaos": {
+    "dafnet_published": 82.0,
+    "dafnet_table_25": {
+      "U-Net (single)": 76,
+      "SDNet (single)": 77,
+      "U-Net (multi)": 79,
+      "SDNet (multi)": 80,
+      "DualStream": 78,
+      "Translation": 75,
+      "DADR": 77,
+      "DAFNet": 82.0
+    },
+    "supervised": {
+      "best_val": [
+        90.55,
+        79.07,
+        87.98
+      ],
+      "best_val_round": [
+        90.6,
+        79.02,
+        88.03
+      ]
+    },
+    "recipe": {
+      "best_val": [
+        89.96,
+        85.33,
+        91.52
+      ],
+      "best_val_round": [
+        90.02,
+        85.32,
+        91.54
+      ]
+    },
+    "cssl_full": {
+      "best_val": [
+        90.47,
+        85.67,
+        90.9
+      ],
+      "best_val_round": [
+        90.55,
+        85.66,
+        90.93
+      ]
+    },
+    "ablation_s1": {
+      "Recipe only": 85.33,
+      "w/o CL": 78.46,
+      "w/o CR": 86.5,
+      "w/o HNM": 85.16,
+      "w/o Silhouette": 84.99,
+      "Full": 85.67
+    }
+  },
+  "speed": {
+    "cssl_s_per_it": 0.15,
+    "selfloop_reimpl_s_per_it": 0.285
+  }
+}
